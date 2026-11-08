@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retail Sales Dashboard</title>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --flag:#c3c2b7;
+  --up:#006300; --down:#d03b3b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --flag:#4a4a46;
+    --up:#0ca30c; --down:#e66767;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --flag:#4a4a46;
+  --up:#0ca30c; --down:#e66767;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--ink2);margin:0 0 6px}
+.note{color:var(--muted);font-size:13px;margin:0 0 22px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px}
+.tile,.card{background:var(--surface);border:1px solid var(--ring);border-radius:12px}
+.tile{padding:14px 16px}
+.tile .k{color:var(--ink2);font-size:13px}
+.tile .v{font-size:26px;font-weight:600;margin-top:2px}
+.tile .d{font-size:13px;color:var(--ink2)}
+.up{color:var(--up)} .down{color:var(--down)}
+.card{padding:18px 18px 14px;margin-bottom:16px}
+.card h2{font-size:17px;margin:0 0 2px}
+.card .hint{color:var(--ink2);font-size:13px;margin:0 0 10px}
+.how{color:var(--muted);font-size:12.5px;margin:10px 0 0;border-top:1px solid var(--grid);padding-top:8px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink2);margin:0 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--muted);font-size:11px;font-family:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.list h3{font-size:14px;margin:0 0 8px;color:var(--ink2);font-weight:600}
+.row{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.row .n{color:var(--muted);text-align:right}
+.row .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .val{font-variant-numeric:tabular-nums;color:var(--ink2)}
+.bar{grid-column:2/4;height:6px;border-radius:0 4px 4px 0;background:var(--s1);margin-top:-2px}
+.bar.o{background:var(--s2)}
+.zero{font-size:38px;font-weight:600}
+#tip{position:fixed;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--ring);
+  box-shadow:0 4px 14px rgba(0,0,0,.12);border-radius:8px;padding:7px 10px;font-size:13px;display:none;z-index:9;max-width:260px}
+#tip b{display:block}
+button.tbl{background:none;border:1px solid var(--axis);color:var(--ink2);border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:10px;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;border-bottom:1px solid var(--grid);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--ink2);font-weight:600}
+.tablewrap{overflow-x:auto}
+.disc{color:var(--muted);font-size:12.5px;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sales to retail chains, 2017–2020</h1>
+  <p class="sub">A household goods supplier: 8 retail chains and smaller customers, 218 products, July 2017 – November 2020.</p>
+  <p class="note">All amounts in euros, excluding VAT (the source table includes 20% VAT, divided by 1.2). December 2020 is not closed and is left out of the totals. Demo data: chain names are replaced with numbers, smaller customers are anonymised.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>1. Sales by month</h2>
+    <p class="hint">Peaks in December and January, a dip in spring and summer, a sharp drop in April–July 2020.</p>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Closed month</span><span><i style="background:var(--flag)"></i>Open month (December 2020)</span></div>
+    <div id="c1"></div>
+    <p class="how">How it's calculated: the sum of the REVENUE column over all product rows of the month's main sheet, divided by 1.2. Sheet copies, total and service rows are skipped. Each month is checked against the sheet's own total: it matches in 41 months out of 42; in July 2017 the sheet total itself is 0.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Top products for the whole closed period</h2>
+    <p class="hint">By units, cheap items lead (microwave covers, bag clips); by revenue, shoe dryers take 4th, 6th, 7th and 10th place.</p>
+    <div class="two">
+      <div class="list" id="topSht"><h3>By units</h3></div>
+      <div class="list" id="topGrn"><h3>By revenue, € excl. VAT</h3></div>
+    </div>
+    <p class="how">How it's calculated: a product is identified by its name in the accounting system, because every chain uses its own barcode for the same product. Units = sum of “Sales, units”, revenue = sum of REVENUE / 1.2, July 2017 – November 2020. Similar names (for example, shoe dryer “Universal” and “Universal, appliance”) are different products, as confirmed by the data owner.</p>
+  </div>
+
+  <div class="card">
+    <h2>3. Average revenue per chain per month</h2>
+    <p class="hint">The average is per chain: how much one chain brings in a month on average.</p>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Revenue per active chain</span></div>
+    <div id="c3"></div>
+    <div class="list" id="seti" style="margin-top:14px"><h3>Revenue from each customer for the whole period, € excl. VAT</h3></div>
+    <p class="how">How it's calculated: the month's revenue excl. VAT divided by the number of customers with revenue above zero in that month. Departments of one chain (Chain 1 – 10/30/50/100, Chain 6 – 10/30/50) are merged into one chain. The table has no orders, so an average order value can't be calculated.</p>
+  </div>
+
+  <div class="card">
+    <h2>4. Returns</h2>
+    <div class="two">
+      <div><div class="zero" id="vzSum">€0 · 0%</div><p class="hint" id="vzSub">of revenue for the whole period</p></div>
+      <p class="hint" style="margin:0" id="vzText">Returns were handled as a 1-for-1 exchange: the customer got the same product, no money was refunded. So returns don't reduce revenue, and there is no separate chart.</p>
+    </div>
+    <p class="how">How it's calculated: the sum of rows with negative revenue or negative units for the closed period (July 2017 – November 2020). Such rows are subtracted from revenue and the top lists. The 1-for-1 exchange rule was confirmed by the data owner.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. Year over year</h2>
+    <p class="hint">Each line is one year, so you can see whether the same month was better or worse a year earlier.</p>
+    <div class="legend"><span><i style="background:var(--s1)"></i>2018</span><span><i style="background:var(--s2)"></i>2019</span><span><i style="background:var(--s3)"></i>2020</span></div>
+    <div id="c5"></div>
+    <button class="tbl" id="tblBtn">Show monthly table</button>
+    <div class="tablewrap" id="tbl" hidden></div>
+    <p class="how">How it's calculated: monthly revenue excl. VAT. “vs previous month” = (month / previous month − 1), “vs a year ago” = (month / same month last year − 1). December 2020 is not closed and not shown.</p>
+  </div>
+
+  <div class="card">
+    <h2>6. Money received from the chains</h2>
+    <p class="hint">This is what the owner counted as a sale: money in the bank. The table records it as one amount per month, and not for every month.</p>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Received</span><span><i style="background:var(--flag)"></i>Needs checking: same as last month or looks like an error</span></div>
+    <div id="c6"></div>
+    <p class="how">How it's calculated: row 2 of the “ACTUALLY RECEIVED” column on the month's main sheet, divided by 1.2. Before 2018 and from April 2020 the column is empty or has a formula error. Grey marks months where the amount equals the previous month to the cent, and January 2018 (74k against revenue of 835k). Payments are not split by chain, so all blocks above use revenue from the chains' reports.</p>
+  </div>
+
+  <div class="card">
+    <h2>7. Data issues</h2>
+    <p class="hint" id="oshSum"></p>
+    <div class="tablewrap" id="osh"></div>
+    <p class="how">How it's handled: rows where something is missing or a number cell contains text. No row is dropped. No product name — the name from the chain's report is used. No chain — revenue stays in the month but the row isn't counted as a chain. Empty revenue with a price and units — calculated as price × units. Text instead of a number — counted as 0 and listed here. Customer names are not shown: some of them are names of private individuals.</p>
+  </div>
+
+  <p class="disc">Portfolio project built on a real, anonymised data export. Amounts are shown in euros for demonstration only. Chain names are replaced with numbers. Calculated by the data owner's rules; this is not tax or accounting advice.</p>
+</div>
+<div id="tip"></div>
+<script src="data.js"></script>
+<script>
+(function(){
+const D = window.DATA;
+const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MNF = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const fmt = v => Math.round(v).toLocaleString("en-US");
+const eur = v => "€" + fmt(v);
+const kfmt = v => !v ? "0" : v >= 1e6 ? (v/1e6).toFixed(1)+"M" : Math.round(v/1000)+"k";
+const pct = v => (v>0?"+":"") + (v*100).toFixed(1) + "%";
+const tip = document.getElementById("tip");
+function showTip(e, html){ tip.innerHTML = html; tip.style.display="block";
+  const x = Math.min(e.clientX+14, innerWidth-tip.offsetWidth-8); tip.style.left=x+"px"; tip.style.top=(e.clientY+14)+"px"; }
+function hideTip(){ tip.style.display="none"; }
+const NS="http://www.w3.org/2000/svg";
+function el(tag, attrs, parent){ const n=document.createElementNS(NS,tag); for(const k in attrs) n.setAttribute(k,attrs[k]); if(parent) parent.appendChild(n); return n; }
+function niceMax(v){ const p=Math.pow(10,Math.floor(Math.log10(v))); const f=v/p; return (f<=1?1:f<=1.2?1.2:f<=1.6?1.6:f<=2?2:f<=2.5?2.5:f<=4?4:f<=5?5:f<=8?8:10)*p; }
+function axes(svg, W, H, L, B, T, max){
+  for(let i=0;i<=4;i++){ const y=T+(H-T-B)*(1-i/4);
+    el("line",{x1:L,x2:W,y1:y,y2:y,stroke:i?"var(--grid)":"var(--axis)","stroke-width":1},svg);
+    const t=el("text",{x:L-6,y:y+4,"text-anchor":"end"},svg); t.textContent=kfmt(max*i/4); }
+}
+// tiles
+const M = D.months, closed = M.filter(m=>!m.otkryt);
+const last = closed[closed.length-1], prev = closed[closed.length-2];
+const ly = closed.find(m=>m.y===last.y-1 && m.m===last.m);
+const sum = a => a.reduce((s,m)=>s+m.vyr,0);
+const y2019 = sum(closed.filter(m=>m.y===2019)), y2018 = sum(closed.filter(m=>m.y===2018));
+const tiles = [
+  ["Revenue, closed period", eur(sum(closed)), "July 2017 – November 2020, excl. VAT"],
+  ["Revenue in 2019", eur(y2019), '<span class="'+(y2019>=y2018?"up":"down")+'">'+(y2019>=y2018?"▲ ":"▼ ")+pct(y2019/y2018-1)+"</span> vs 2018"],
+  ["November 2020 vs October", '<span class="'+(last.vyr>=prev.vyr?"up":"down")+'">'+(last.vyr>=prev.vyr?"▲ ":"▼ ")+pct(last.vyr/prev.vyr-1)+"</span>", eur(last.vyr)+" vs "+eur(prev.vyr)],
+  ["November 2020 vs November 2019", '<span class="'+(last.vyr>=ly.vyr?"up":"down")+'">'+(last.vyr>=ly.vyr?"▲ ":"▼ ")+pct(last.vyr/ly.vyr-1)+"</span>", eur(last.vyr)+" vs "+eur(ly.vyr)]
+];
+document.getElementById("tiles").innerHTML = tiles.map(t=>'<div class="tile"><div class="k">'+t[0]+'</div><div class="v">'+t[1]+'</div><div class="d">'+t[2]+'</div></div>').join("");
+
+// monthly bars (shared)
+function bars(id, rows, val, color, tipf){
+  const W=900,H=260,L=44,B=34,T=10; const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+  const max=niceMax(Math.max(...rows.map(r=>val(r)||0))); axes(svg,W,H,L,B,T,max);
+  const n=rows.length, step=(W-L)/n, bw=Math.max(step-2,2);
+  rows.forEach((r,i)=>{ const v=val(r); const x=L+i*step+1;
+    if(r.m===1 || i===0){ const t=el("text",{x:x,y:H-B+16},svg); t.textContent=r.y; }
+    if(r.otkryt){ el("rect",{x:x,y:H-B-24,width:bw,height:24,rx:3,fill:"var(--flag)"},svg);
+      const t=el("text",{x:x+bw,y:H-B-30,"text-anchor":"end"},svg); t.textContent="Dec 2020: not closed"; }
+    const h = v ? Math.max((H-T-B)*v/max,1.5) : 0, y=H-B-h;
+    if(h) el("path",{d:`M${x},${H-B}V${y+Math.min(4,h)}q0,-${Math.min(4,h)} ${Math.min(4,bw/2)},-${Math.min(4,h)}H${x+bw-Math.min(4,bw/2)}q${Math.min(4,bw/2)},0 ${Math.min(4,bw/2)},${Math.min(4,h)}V${H-B}Z`,fill:color(r)},svg);
+    if(!v && !r.otkryt){ const t=el("text",{x:x+bw/2,y:H-B-4,"text-anchor":"middle"},svg); t.textContent="–"; }
+    const hit=el("rect",{x:L+i*step,y:T,width:step,height:H-T-B,fill:"transparent"},svg);
+    hit.addEventListener("mousemove",e=>showTip(e,tipf(r))); hit.addEventListener("mouseleave",hideTip);
+  });
+  document.getElementById(id).appendChild(svg);
+}
+const lbl = r => MNF[r.m-1]+" "+r.y;
+bars("c1", M, r=>r.otkryt? 0 : r.vyr, r=>r.otkryt?"var(--flag)":"var(--s1)",
+  r=>"<b>"+lbl(r)+"</b>"+(r.otkryt?"Month not closed, almost no data":eur(r.vyr)+" · "+fmt(r.sht)+" units · chains: "+r.setey));
+
+// top lists
+function list(id, rows, money, unit, cls){ const max=rows[0][1]; const box=document.getElementById(id);
+  rows.forEach((r,i)=>{ const d=document.createElement("div"); d.className="row";
+    d.innerHTML='<span class="n">'+(i+1)+'</span><span class="name" title="'+r[0].replace(/"/g,"&quot;")+'">'+r[0]+'</span><span class="val">'+(money?eur(r[1]):fmt(r[1])+unit)+'</span><div class="bar '+cls+'" style="width:'+(r[1]/max*100)+'%"></div>';
+    box.appendChild(d); }); }
+list("topSht", D.top_sht, false, " units", "o");
+list("topGrn", D.top_grn, true, "", "");
+const seti = D.seti.slice(0,8); const rest = D.seti.slice(8).reduce((s,r)=>s+r[1],0);
+seti.push(["Others ("+(D.seti.length-8)+" customers)", rest]);
+list("seti", seti, true, "", "");
+
+// average per chain
+bars("c3", closed, r=>r.setey? r.vyr/r.setey : 0, ()=>"var(--s1)",
+  r=>"<b>"+lbl(r)+"</b>"+eur(r.vyr/r.setey)+" per chain<br>"+eur(r.vyr)+" / "+r.setey+" customers");
+
+// year over year: lines
+(function(){ const W=900,H=260,L=44,B=30,T=10; const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,role:"img"});
+  const years=[[2018,"var(--s1)"],[2019,"var(--s2)"],[2020,"var(--s3)"]];
+  const rows=closed.filter(r=>r.y>=2018); const max=niceMax(Math.max(...rows.map(r=>r.vyr))); axes(svg,W,H,L,B,T,max);
+  const X=m=>L+20+(W-L-40)*(m-1)/11, Y=v=>H-B-(H-T-B)*v/max;
+  MN.forEach((n,i)=>{ const t=el("text",{x:X(i+1),y:H-B+16,"text-anchor":"middle"},svg); t.textContent=n; });
+  years.forEach(([y,c])=>{ const pts=rows.filter(r=>r.y===y);
+    el("path",{d:pts.map((r,i)=>(i?"L":"M")+X(r.m)+","+Y(r.vyr)).join(""),fill:"none",stroke:c,"stroke-width":2,"stroke-linejoin":"round"},svg);
+    const lp=pts[pts.length-1]; const t=el("text",{x:X(lp.m)+6,y:Y(lp.vyr)+4},svg); t.textContent=y; t.style.fill="var(--ink2)";
+  });
+  const cross=el("line",{y1:T,y2:H-B,stroke:"var(--axis)","stroke-width":1,visibility:"hidden"},svg);
+  const dots=years.map(([y,c])=>el("circle",{r:4.5,fill:c,stroke:"var(--surface)","stroke-width":2,visibility:"hidden"},svg));
+  const hit=el("rect",{x:L,y:T,width:W-L,height:H-T-B,fill:"transparent"},svg);
+  hit.addEventListener("mousemove",e=>{ const b=svg.getBoundingClientRect(); const sx=(e.clientX-b.left)*W/b.width;
+    const m=Math.max(1,Math.min(12,Math.round((sx-L-20)/((W-L-40)/11))+1)); cross.setAttribute("x1",X(m)); cross.setAttribute("x2",X(m)); cross.setAttribute("visibility","visible");
+    let html="<b>"+MNF[m-1]+"</b>";
+    years.forEach(([y],k)=>{ const r=rows.find(q=>q.y===y&&q.m===m); if(r){ dots[k].setAttribute("cx",X(m)); dots[k].setAttribute("cy",Y(r.vyr)); dots[k].setAttribute("visibility","visible"); html+=y+": "+eur(r.vyr)+"<br>"; } else dots[k].setAttribute("visibility","hidden"); });
+    showTip(e,html); });
+  hit.addEventListener("mouseleave",()=>{ hideTip(); cross.setAttribute("visibility","hidden"); dots.forEach(d=>d.setAttribute("visibility","hidden")); });
+  document.getElementById("c5").appendChild(svg);
+})();
+
+// table
+document.getElementById("tblBtn").addEventListener("click",function(){ const t=document.getElementById("tbl"); t.hidden=!t.hidden; this.textContent=t.hidden?"Show monthly table":"Hide table";
+  if(t.innerHTML) return;
+  let h="<table><tr><th>Month</th><th>Revenue, €</th><th>Units</th><th>Chains</th><th>vs previous month</th><th>vs a year ago</th><th>Received, €</th></tr>";
+  closed.forEach((r,i)=>{ const p=closed[i-1], y=closed.find(q=>q.y===r.y-1&&q.m===r.m);
+    h+="<tr><td>"+lbl(r)+"</td><td>"+fmt(r.vyr)+"</td><td>"+fmt(r.sht)+"</td><td>"+r.setey+"</td><td>"+(p?pct(r.vyr/p.vyr-1):"–")+"</td><td>"+(y?pct(r.vyr/y.vyr-1):"–")+"</td><td>"+(r.dengi?fmt(r.dengi)+(r.flag?" *":""):"–")+"</td></tr>"; });
+  t.innerHTML=h+"</table><p class='how'>* amount needs checking (repeats the previous month or looks like an error).</p>"; });
+
+// money received (flags in data.js stay in Russian: "повтор" = repeat, "сомнительно" = doubtful)
+const dm = closed.filter(r=>r.y>=2018 && (r.y<2020 || r.m<=3));
+bars("c6", dm, r=>r.dengi, r=>r.flag?"var(--flag)":"var(--s1)",
+  r=>"<b>"+lbl(r)+"</b>"+(r.dengi? eur(r.dengi)+(r.flag==="повтор"?"<br>Same amount as last month":r.flag==="сомнительно"?"<br>Looks like an error in the table":"") : "No amount in the table")+"<br>Revenue from the chain's report: "+eur(r.vyr));
+
+// returns
+const VZ = D.vozvraty || {grn:0, sht:0, stroki:0};
+if (VZ.stroki) {
+  const all = closed.reduce((s,r)=>s+r.vyr,0);
+  document.getElementById("vzSum").textContent = eur(VZ.grn)+" · "+(VZ.grn/all*100).toFixed(2)+"%";
+  document.getElementById("vzSub").textContent = "of revenue for the whole period · rows: "+VZ.stroki+" · units: "+fmt(VZ.sht);
+  document.getElementById("vzText").textContent = "The table has rows with a minus. They are already subtracted from revenue and the top lists. Returns were usually a 1-for-1 exchange, so these rows are worth checking with the owner.";
+}
+
+// data issues
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const OS = D.oshibki || [];
+document.getElementById("oshSum").textContent = OS.length ? "Rows with notes: "+OS.length+". None were dropped; monthly totals still match the sheet totals." : "No issues found.";
+if (OS.length) document.getElementById("osh").innerHTML = "<table><tr><th>Sheet</th><th>Row</th><th>What's wrong and what we did</th></tr>"+
+  OS.map(o=>"<tr><td>"+esc(o[0])+"</td><td>"+o[1]+"</td><td>"+esc(o[2])+"</td></tr>").join("")+"</table>";
+})();
+</script>
+</body>
+</html>
